@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { userService, logService } from "../services/api";
 
 function Login() {
   const navigate = useNavigate();
@@ -10,9 +11,8 @@ function Login() {
     e.preventDefault();
 
     try {
-      const url = process.env.REACT_APP_API_PATH;
-      const response = await fetch(`${url}/users`);
-      const users = await response.json();
+      const res = await userService.getAll();
+      const users = res.data;
 
       const foundUser = users.find(
         (u) => u.username === username && u.password === password
@@ -22,16 +22,12 @@ function Login() {
         localStorage.setItem("user", JSON.stringify(foundUser));
       
         // 📝 Ghi log đăng nhập
-        await fetch(`${url}/logs`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "login",
-            user: foundUser.username,
-            timestamp: new Date().toISOString(),
-            ip: "127.0.0.1", // hoặc bạn có thể dùng một lib để lấy IP
-            level: "info"
-          })
+        await logService.create({
+          action: "login",
+          user: foundUser.username,
+          timestamp: new Date().toISOString(),
+          ip: "127.0.0.1",
+          level: "info"
         });
       
         alert("Đăng nhập thành công!");
@@ -40,6 +36,8 @@ function Login() {
         } else {
           navigate("/");
         }
+      } else {
+        alert("Sai tên đăng nhập hoặc mật khẩu!");
       }
     } catch (err) {
       alert("Lỗi server. Vui lòng thử lại.");

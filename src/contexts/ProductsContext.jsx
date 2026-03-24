@@ -1,17 +1,16 @@
 import React, { createContext, useState, useEffect } from "react";
-import axios from "axios";
+import { productService } from "../services/api";
 
 export const ProductsContext = createContext();
 
 function ProductsProvider({ children }) {
   const [products, setProducts] = useState([]);
 
-  const url = process.env.REACT_APP_API_PATH;
   useEffect(() => {
-    axios.get(`${url}/products`).then((res) => {
+    productService.getAll().then((res) => {
       setProducts(res.data);
     });
-  }, [url]);
+  }, []);
 
   return (
     <ProductsContext.Provider value={{ products, setProducts }}>

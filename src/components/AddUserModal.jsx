@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Modal, Button, Form } from "react-bootstrap";
+import { userService } from "../services/api";
 
 const AddUserModal = ({ show, onHide, onSave }) => {
   const [formData, setFormData] = useState({
@@ -15,17 +16,15 @@ const AddUserModal = ({ show, onHide, onSave }) => {
   };
 
   const handleSubmit = () => {
-    const url = process.env.REACT_APP_API_PATH;
-    fetch(`${url}/users`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(formData),
-    })
-      .then((res) => res.json())
-      .then((newUser) => {
-        onSave(newUser);
+    userService.create(formData)
+      .then((res) => {
+        onSave(res.data);
         onHide();
         setFormData({ fullname: "", username: "", password: "", email: "", role: "user" });
+      })
+      .catch(err => {
+        console.error("Lỗi thêm người dùng:", err);
+        alert("Không thể thêm người dùng mới!");
       });
   };
 

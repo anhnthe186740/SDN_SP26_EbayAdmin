@@ -91,24 +91,31 @@ function Sidebar() {
   const selectedKey = items.find((item) => location.pathname === item.path)?.key || items[0].key;
 
   return (
-    <div className="flex flex-col border-r-2 border-b-2 bg-gray-100 min-h-screen">
-      <Button
-          variant="primary"
-          onClick={toggleCollapsed}
-          className="d-flex align-items-center justify-content-center h-12 w-12"
-          style={{ zIndex: 50 }}
-        >
-          <i className={`bi ${collapsed ? 'bi-chevron-right' : 'bi-chevron-left'}`}></i>
-        </Button>
+    <div className="sidebar-acrylic d-flex flex-column h-100 shadow-sm" style={{ minHeight: '100vh', width: collapsed ? 80 : 280, transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}>
+      <div className="p-4 d-flex justify-content-between align-items-center">
+        {!collapsed && <span className="fw-bold text-primary" style={{ fontSize: '1.2rem', letterSpacing: '-0.5px' }}>EBAY ADMIN</span>}
+        <Button
+            type="text"
+            onClick={toggleCollapsed}
+            className="d-flex align-items-center justify-content-center p-0"
+            style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(0,0,0,0.05)' }}
+          >
+            <i className={`bi ${collapsed ? 'bi-chevron-right' : 'bi-chevron-left'}`}></i>
+          </Button>
+      </div>
       <Menu
-        style={{ width: collapsed ? 80 : 300 }}
         defaultSelectedKeys={[items[0].key]}
         selectedKeys={[selectedKey]}
         mode="inline"
-        className="border-none bg-gray-100 flex-1"
-        items={items}
+        theme="light"
+        className="border-none bg-transparent px-2"
         inlineCollapsed={collapsed}
         onClick={({ key }) => handleItemClick(key)}
+        items={items.map(item => ({
+          ...item,
+          className: selectedKey === item.key ? 'sidebar-item-active' : 'mb-1 rounded-3'
+        }))}
+        style={{ borderRight: 0 }}
       />
     </div>
   );

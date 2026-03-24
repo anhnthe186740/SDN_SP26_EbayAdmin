@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import { disputeService, orderService, userService, orderItemService, logService } from '../services/api';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 const DisputeManagementPage = () => {
@@ -12,22 +12,23 @@ const DisputeManagementPage = () => {
     const [selectedDispute, setSelectedDispute] = useState(null);
 
     useEffect(() => {
-        const url = process.env.REACT_APP_API_PATH;
-        axios.get(`${url}/disputes`)
-            .then((response) => setDisputes(response.data))
-            .catch((error) => console.error('Lỗi khi tải khiếu nại:', error));
-
-        axios.get(`${url}/orderTable`)
-            .then((response) => setOrders(response.data))
-            .catch((error) => console.error('Lỗi khi tải đơn hàng:', error));
-
-        axios.get(`${url}/users`)
-            .then((response) => setUsers(response.data))
-            .catch((error) => console.error('Lỗi khi tải người dùng:', error));
-
-        axios.get(`${url}/orderItem`)
-            .then((response) => setOrderItems(response.data))
-            .catch((error) => console.error('Lỗi khi tải sản phẩm trong đơn hàng:', error));
+        const fetchData = async () => {
+            try {
+                const [disputesRes, ordersRes, usersRes, orderItemsRes] = await Promise.all([
+                    disputeService.getAll(),
+                    orderService.getAll(),
+                    userService.getAll(),
+                    orderItemService.getAll()
+                ]);
+                setDisputes(disputesRes.data);
+                setOrders(ordersRes.data);
+                setUsers(usersRes.data);
+                setOrderItems(orderItemsRes.data);
+            } catch (error) {
+                console.error('Lỗi khi tải dữ liệu khiếu nại:', error);
+            }
+        };
+        fetchData();
     }, []);
 
     const handleStatusChange = (id, newStatus) => {
@@ -37,16 +38,14 @@ const DisputeManagementPage = () => {
         const confirmChange = window.confirm(`Bạn có chắc chắn muốn đổi trạng thái khiếu nại #${id} thành "${newStatus}" không?`);
         if (!confirmChange) return;
 
-        const url = process.env.REACT_APP_API_PATH;
-        axios.patch(`${url}/disputes/${id}`, { status: newStatus })
+        disputeService.update(id, { status: newStatus })
             .then(() => {
                 const updated = disputes.map((d) =>
                     d.id.toString() === id.toString() ? { ...d, status: newStatus } : d
                 );
                 setDisputes(updated);
                 alert('Cập nhật trạng thái thành công!');
-                const url = process.env.REACT_APP_API_PATH;
-                axios.post(`${url}/logs`, {
+                logService.create({
                     action: 'Update Dispute Status',
                     disputeId: id,
                     newStatus,
@@ -139,79 +138,95 @@ const DisputeManagementPage = () => {
     };
 
     return (
-        <div className="container-fluid py-4">
-            <h2 className="mb-4 fw-bold text-primary">Quản lý khiếu nại</h2>
+        <div className="py-2">
+            <div className="d-flex justify-content-between align-items-center mb-4">
+              <div>
+                <h2 className="fw-bold text-dark mb-1">Khiếu nại & Tranh chấp</h2>
+                <p className="text-muted small">Giải quyết các vấn đề giữa người mua và người bán để đảm bảo uy tín sàn.</p>
+              </div>
+            </div>
 
-            <div className="card mb-4 shadow-sm border-0">
-                <div className="card-body">
-                    <div className="row g-3">
-                        <div className="col-md-6">
-                            <label className="form-label fw-medium">Lọc theo trạng thái:</label>
-                            <select
-                                value={filterStatus}
-                                onChange={(e) => setFilterStatus(e.target.value)}
-                                className="form-select rounded-pill"
-                            >
-                                <option value="">Tất cả</option>
-                                <option value="pending">Đang xử lý</option>
-                                <option value="resolved">Đã giải quyết</option>
-                                <option value="closed">Đã đóng</option>
-                            </select>
-                        </div>
-                        <div className="col-md-6">
-                            <label className="form-label fw-medium">Tìm kiếm:</label>
-                            <input
-                                type="text"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                placeholder="Tìm theo ID, User ID, Order ID"
-                                className="form-control rounded-pill"
-                            />
+            <div className="glass-card p-4 mb-4 border-0">
+                <div className="row g-3">
+                    <div className="col-md-6">
+                        <label className="form-label text-muted small fw-bold text-uppercase">Lọc trạng thái</label>
+                        <select
+                            value={filterStatus}
+                            onChange={(e) => setFilterStatus(e.target.value)}
+                            className="form-select border-0 bg-light rounded-3 py-2"
+                        >
+                            <option value="">Tất cả</option>
+                            <option value="pending">⏳ Đang xử lý</option>
+                            <option value="resolved">✅ Đã giải quyết</option>
+                            <option value="closed">🔒 Đã đóng</option>
+                        </select>
+                    </div>
+                    <div className="col-md-6">
+                        <label className="form-label text-muted small fw-bold text-uppercase">Tìm kiếm nhanh</label>
+                        <div className="input-group bg-light rounded-3 overflow-hidden border-0">
+                          <span className="input-group-text bg-transparent border-0"><i className="bi bi-search text-muted"></i></span>
+                          <input
+                              type="text"
+                              value={searchQuery}
+                              onChange={(e) => setSearchQuery(e.target.value)}
+                              placeholder="ID, User ID, mẫ đơn hàng..."
+                              className="form-control border-0 bg-transparent py-2"
+                          />
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div className="card shadow-sm border-0">
-                <div className="card-body p-0">
-                    <div className="table-responsive">
-                        <table className="table table-hover table-bordered mb-0">
-                            <thead className="table-light text-center">
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Người dùng</th>
-                                    <th>Đơn hàng</th>
-                                    <th>Lý do</th>
-                                    <th>Số tiền yêu cầu</th>
-                                    <th>Ngày tranh chấp</th>
-                                    <th>Trạng thái & Hành động</th>
-                                    <th>Chi tiết</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredDisputes.map((dispute) => (
-                                    <tr key={dispute.id} className="text-center align-middle">
-                                        <td>{dispute.id}</td>
-                                        <td>{getUserName(dispute.raisedBy)}</td>
-                                        <td>{dispute.orderId}</td>
-                                        <td>{dispute.reason}</td>
-                                        <td>{dispute.amountClaimed}</td>
-                                        <td>{dispute.disputeDate}</td>
-                                        <td>{getStatusBadgeAndActions(dispute)}</td>
-                                        <td>
-                                            <button
-                                                className="btn btn-sm btn-outline-primary rounded-pill px-3"
-                                                onClick={() => setSelectedDispute(dispute)}
-                                            >
-                                                <i className="bi bi-eye"></i> Xem
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+            <div className="table-responsive">
+                <table className="table table-modern">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Hội thoại</th>
+                            <th>Mã đơn</th>
+                            <th>Lý do & Số tiền</th>
+                            <th>Ngày gửi</th>
+                            <th>Trạng thái & Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {filteredDisputes.length === 0 ? (
+                          <tr><td colSpan="6" className="text-center py-5 text-muted">Không có khiếu nại nào phù hợp.</td></tr>
+                        ) : filteredDisputes.map((dispute) => (
+                            <tr key={dispute.id}>
+                                <td><span className="fw-bold">#{dispute.id.toString().slice(-4).toUpperCase()}</span></td>
+                                <td>
+                                   <div className="fw-bold text-primary">{getUserName(dispute.raisedBy)}</div>
+                                   <div className="small text-muted">Bên khiếu nại</div>
+                                </td>
+                                <td><code className="bg-light px-2 py-1 rounded text-dark">#{dispute.orderId}</code></td>
+                                <td>
+                                    <div className="fw-medium text-dark text-truncate" style={{ maxWidth: 200 }} title={dispute.reason}>{dispute.reason}</div>
+                                    <div className="text-danger fw-bold small">Yêu cầu bồi thường: ${dispute.amountClaimed}</div>
+                                </td>
+                                <td><div className="text-muted small">{dispute.disputeDate}</div></td>
+                                <td>
+                                  <div className="d-flex align-items-center justify-content-between gap-3">
+                                    <span className={`badge-modern ${
+                                        dispute.status === 'resolved' ? 'bg-success-subtle text-success' : 
+                                        dispute.status === 'pending' ? 'bg-warning-subtle text-warning' : 'bg-danger-subtle text-danger'
+                                    }`}>
+                                        {dispute.status}
+                                    </span>
+                                    {dispute.status === 'pending' ? (
+                                      <div className="d-flex gap-1">
+                                          <button onClick={() => handleApproveReject(dispute.id, 'approve')} className="btn-modern btn-sm bg-success text-white px-2 py-1"><i className="bi bi-check-lg"></i></button>
+                                          <button onClick={() => handleApproveReject(dispute.id, 'reject')} className="btn-modern btn-sm bg-danger text-white px-2 py-1"><i className="bi bi-x-lg"></i></button>
+                                      </div>
+                                    ) : (
+                                      <button className="btn-modern btn-sm bg-light text-primary" onClick={() => setSelectedDispute(dispute)}><i className="bi bi-eye-fill"></i></button>
+                                    )}
+                                  </div>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
             </div>
 
             {selectedDispute && (

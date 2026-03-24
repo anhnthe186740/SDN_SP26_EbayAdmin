@@ -1,7 +1,5 @@
-// src/contexts/ReturnsContext.js
-
 import React, { createContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import { returnRequestService } from '../services/api';
 
 export const ReturnsContext = createContext();
 
@@ -10,10 +8,7 @@ export const ReturnsProvider = ({ children }) => {
   const [selectedReturn, setSelectedReturn] = useState(null);
 
   useEffect(() => {
-    const url = process.env.REACT_APP_API_PATH;
-    // Fetch return requests
-    axios
-      .get(`${url}/returns`)
+    returnRequestService.getAll()
       .then((res) => setReturns(res.data))
       .catch((err) => console.error("Error fetching returns:", err));
   }, []);

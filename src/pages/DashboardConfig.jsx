@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import { dashboardService } from "../services/api";
 import { Button, Switch, Select, Card, Input, Space } from "antd";
 import { BarChart, PieChart, LineChart } from "lucide-react"; // Tùy chọn icon
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
@@ -19,8 +19,7 @@ const DashboardConfig = () => {
   const [config, setConfig] = useState(null);
 
   useEffect(() => {
-    const url = process.env.REACT_APP_API_PATH;
-    axios.get(`${url}/dashboardConfigs?role=admin`).then((res) => {
+    dashboardService.getConfig({ role: "admin" }).then((res) => {
       setConfig(res.data[0]);
     });
   }, []);
@@ -52,16 +51,14 @@ const DashboardConfig = () => {
   };
 
   const saveConfig = () => {
-    const url = process.env.REACT_APP_API_PATH;
-    axios.put(`${url}/dashboardConfigs/${config.id}`, config).then(() => {
+    dashboardService.updateConfig(config.id, config).then(() => {
       alert("Cấu hình đã được lưu!");
     });
   };
 
   const resetDefault = () => {
     // Reload lại cấu hình mặc định từ server
-    const url = process.env.REACT_APP_API_PATH;
-    axios.get(`${url}/dashboardConfigs?role=admin`).then((res) => {
+    dashboardService.getConfig({ role: "admin" }).then((res) => {
       setConfig(res.data[0]);
     });
   };

@@ -13,7 +13,9 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
-import axios from 'axios';
+import { userService, productService, orderService, genericService } from '../services/api';
+
+const statisticsService = genericService('statistics');
 
 // Đăng ký các thành phần của Chart.js
 ChartJS.register(
@@ -30,56 +32,39 @@ ChartJS.register(
 // Hàm xử lý dữ liệu cho biểu đồ
 const processChartData = (data, period) => {
   if (!data || !Array.isArray(data)) return { labels: [], datasets: [] };
-  if (period === 'day') {
-    return {
-      labels: data.map(item => item.date),
-      datasets: [
-        {
-          label: 'Doanh thu ($)',
-          data: data.map(item => item.revenue),
-          borderColor: 'rgb(75, 192, 192)',
-          backgroundColor: 'rgba(75, 192, 192, 0.2)',
-          fill: true,
+  
+  const createGradient = (ctx, area) => {
+    const gradient = ctx.createLinearGradient(0, area.bottom, 0, area.top);
+    gradient.addColorStop(0, 'rgba(0, 210, 255, 0)');
+    gradient.addColorStop(1, 'rgba(0, 210, 255, 0.2)');
+    return gradient;
+  };
+
+  const labels = data.map(item => item.date);
+  const revenueData = data.map(item => item.revenue);
+
+  return {
+    labels,
+    datasets: [
+      {
+        label: 'Doanh thu ($)',
+        data: revenueData,
+        borderColor: '#00D2FF',
+        backgroundColor: (context) => {
+          const chart = context.chart;
+          const {ctx, chartArea} = chart;
+          if (!chartArea) return null;
+          return createGradient(ctx, chartArea);
         },
-      ],
-    };
-  } else if (period === 'month') {
-    const monthlyData = data.reduce((acc, item) => {
-      const month = item.date.slice(0, 7);
-      acc[month] = (acc[month] || 0) + item.revenue;
-      return acc;
-    }, {});
-    return {
-      labels: Object.keys(monthlyData),
-      datasets: [
-        {
-          label: 'Doanh thu ($)',
-          data: Object.values(monthlyData),
-          borderColor: 'rgb(75, 192, 192)',
-          backgroundColor: 'rgba(75, 192, 192, 0.2)',
-          fill: true,
-        },
-      ],
-    };
-  } else if (period === 'quarter') {
-    const quarterlyData = data.reduce((acc, item) => {
-      const quarter = `Q${Math.ceil(parseInt(item.date.slice(5, 7)) / 3)}-${item.date.slice(0, 4)}`;
-      acc[quarter] = (acc[quarter] || 0) + item.revenue;
-      return acc;
-    }, {});
-    return {
-      labels: Object.keys(quarterlyData),
-      datasets: [
-        {
-          label: 'Doanh thu ($)',
-          data: Object.values(quarterlyData),
-          borderColor: 'rgb(75, 192, 192)',
-          backgroundColor: 'rgba(75, 192, 192, 0.2)',
-          fill: true,
-        },
-      ],
-    };
-  }
+        fill: true,
+        tension: 0.4,
+        pointRadius: 4,
+        pointBackgroundColor: '#fff',
+        pointBorderColor: '#00D2FF',
+        pointHoverRadius: 6,
+      },
+    ],
+  };
 };
 
 const processOrdersData = (data) => {
@@ -135,12 +120,11 @@ function Dashboard() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const url = process.env.REACT_APP_API_PATH;
         const [usersRes, productsRes, ordersRes, statisticsRes] = await Promise.all([
-          axios.get(`${url}/users`),
-          axios.get(`${url}/products`),
-          axios.get(`${url}/orderTable`),
-          axios.get(`${url}/statistics`),
+          userService.getAll(),
+          productService.getAll(),
+          orderService.getAll(),
+          statisticsService.getAll(),
         ]);
         setUsers(usersRes.data);
         setProducts(productsRes.data);
@@ -179,9 +163,29 @@ function Dashboard() {
     maintainAspectRatio: false,
     plugins: {
       legend: {
-        position: 'top',
+        display: false,
       },
+      tooltip: {
+        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+        titleColor: '#1E293B',
+        bodyColor: '#1E293B',
+        borderColor: 'rgba(0, 210, 255, 0.2)',
+        borderWidth: 1,
+        padding: 12,
+        cornerRadius: 12,
+        displayColors: false,
+      }
     },
+    scales: {
+      x: {
+        grid: { display: false },
+        ticks: { color: '#64748B', font: { family: 'Plus Jakarta Sans' } }
+      },
+      y: {
+        grid: { color: 'rgba(0, 0, 0, 0.03)' },
+        ticks: { color: '#64748B', font: { family: 'Plus Jakarta Sans' } }
+      }
+    }
   };
 
   // Hiển thị loading hoặc lỗi
@@ -204,61 +208,72 @@ function Dashboard() {
   }
 
   return (
-    <Container fluid className="py-4">
-      <h1 className="mb-4">Bảng Điều Khiển</h1>
+    <Container fluid className="py-2">
+      <div className="d-flex justify-content-between align-items-center mb-5">
+        <div>
+          <h1 className="fw-800 text-dark mb-1" style={{ fontSize: '2.5rem' }}>Bảng Điều Khiển</h1>
+          <p className="text-muted">Chào mừng trở lại, Admin. Đây là tổng quan hệ thống hôm nay.</p>
+        </div>
+        <div className="glass-card p-2 px-3 d-flex align-items-center gap-3">
+          <div className="text-end">
+            <div className="fw-bold">24 Mar 2026</div>
+            <div className="small text-muted">Hệ thống ổn định</div>
+          </div>
+          <div className="bg-success rounded-circle" style={{ width: 10, height: 10 }}></div>
+        </div>
+      </div>
 
       {/* Thẻ thống kê */}
-      <Row className="mb-4">
-        <Col md={4} className="mb-4">
-          <Card
-            bg="primary"
-            text="white"
-            className="cursor-pointer"
-            onClick={handleUsersClick}
-          >
-            <Card.Body>
-              <Card.Title>Tổng Người Dùng</Card.Title>
-              <Card.Text className="display-6">{users.length}</Card.Text>
-            </Card.Body>
-          </Card>
+      <Row className="mb-5">
+        <Col md={4}>
+          <div className="glass-card p-4 border-0 h-100 position-relative overflow-hidden" onClick={handleUsersClick} style={{ cursor: 'pointer' }}>
+             <div className="position-absolute" style={{ top: -20, right: -20, width: 100, height: 100, background: 'var(--primary-gradient)', opacity: 0.1, borderRadius: '50%' }}></div>
+             <div className="d-flex align-items-center gap-3 mb-3">
+                <div className="p-3 rounded-4" style={{ background: 'rgba(0, 210, 255, 0.1)', color: 'var(--electric-blue)' }}>
+                  <i className="bi bi-people-fill fs-4"></i>
+                </div>
+                <span className="fw-semibold text-muted">Người dùng</span>
+             </div>
+             <h2 className="display-5 fw-bold mb-0">{users.length}</h2>
+             <span className="text-success small fw-bold mt-2 d-block">+12% so với tháng trước</span>
+          </div>
         </Col>
-        <Col md={4} className="mb-4">
-          <Card
-            bg="success"
-            text="white"
-            className="cursor-pointer"
-            onClick={handleProductsClick}
-          >
-            <Card.Body>
-              <Card.Title>Tổng Sản Phẩm</Card.Title>
-              <Card.Text className="display-6">{products.length}</Card.Text>
-            </Card.Body>
-          </Card>
+        <Col md={4}>
+          <div className="glass-card p-4 border-0 h-100 position-relative overflow-hidden" onClick={handleProductsClick} style={{ cursor: 'pointer' }}>
+             <div className="position-absolute" style={{ top: -20, right: -20, width: 100, height: 100, background: 'var(--secondary-gradient)', opacity: 0.1, borderRadius: '50%' }}></div>
+             <div className="d-flex align-items-center gap-3 mb-3">
+                <div className="p-3 rounded-4" style={{ background: 'rgba(0, 255, 198, 0.1)', color: '#00FFC6' }}>
+                  <i className="bi bi-box-seam-fill fs-4"></i>
+                </div>
+                <span className="fw-semibold text-muted">Sản phẩm</span>
+             </div>
+             <h2 className="display-5 fw-bold mb-0">{products.length}</h2>
+             <span className="text-success small fw-bold mt-2 d-block">+5 sản phẩm mới</span>
+          </div>
         </Col>
-        <Col md={4} className="mb-4">
-          <Card
-            bg="info"
-            text="white"
-            className="cursor-pointer"
-            onClick={handleOrdersClick}
-          >
-            <Card.Body>
-              <Card.Title>Tổng Đơn Hàng</Card.Title>
-              <Card.Text className="display-6">{orders.length}</Card.Text>
-            </Card.Body>
-          </Card>
+        <Col md={4}>
+          <div className="glass-card p-4 border-0 h-100 position-relative overflow-hidden" onClick={handleOrdersClick} style={{ cursor: 'pointer' }}>
+             <div className="position-absolute" style={{ top: -20, right: -20, width: 100, height: 100, background: 'var(--primary-gradient)', opacity: 0.1, borderRadius: '50%' }}></div>
+             <div className="d-flex align-items-center gap-3 mb-3">
+                <div className="p-3 rounded-4" style={{ background: 'rgba(58, 123, 213, 0.1)', color: 'var(--deep-blue)' }}>
+                   <i className="bi bi-cart-check-fill fs-4"></i>
+                </div>
+                <span className="fw-semibold text-muted">Đơn hàng</span>
+             </div>
+             <h2 className="display-5 fw-bold mb-0">{orders.length}</h2>
+             <span className="text-warning small fw-bold mt-2 d-block">3 đơn chờ xử lý</span>
+          </div>
         </Col>
       </Row>
 
       {/* Biểu đồ */}
-      <Row className="mb-4">
+      <Row className="mb-5">
         <Col md={12}>
-          <Card>
-            <Card.Body>
-              <Card.Title>Thống Kê Doanh Thu</Card.Title>
-              <Form.Group className="mb-3">
-                <Form.Label>Chọn khoảng thời gian:</Form.Label>
-                <Form.Select
+          <div className="glass-card p-4 border-0">
+            <div className="d-flex justify-content-between align-items-center mb-4">
+               <h4 className="mb-0 fw-bold">Thống kê doanh thu</h4>
+               <Form.Select
+                  className="w-auto border-0 bg-light rounded-3"
                   value={revenuePeriod}
                   onChange={(e) => setRevenuePeriod(e.target.value)}
                 >
@@ -266,38 +281,30 @@ function Dashboard() {
                   <option value="month">Theo tháng</option>
                   <option value="quarter">Theo quý</option>
                 </Form.Select>
-              </Form.Group>
-              <div style={{ height: '300px' }}>
-                <Line data={revenueData} options={chartOptions} />
-              </div>
-            </Card.Body>
-          </Card>
+            </div>
+            <div style={{ height: '350px' }}>
+              <Line data={revenueData} options={chartOptions} />
+            </div>
+          </div>
         </Col>
       </Row>
 
-      <Row className="mb-4">
-        <Col md={12}>
-          <Card>
-            <Card.Body>
-              <Card.Title>Đơn Hàng Mỗi Tháng</Card.Title>
-              <div style={{ height: '300px' }}>
-                <Bar data={ordersData} options={chartOptions} />
-              </div>
-            </Card.Body>
-          </Card>
+      <Row>
+        <Col md={6} className="mb-4">
+          <div className="glass-card p-4 border-0 h-100">
+             <h4 className="mb-4 fw-bold">Đơn hàng gần đây</h4>
+             <div style={{ height: '250px' }}>
+                <Bar data={processOrdersData(statistics)} options={chartOptions} />
+             </div>
+          </div>
         </Col>
-      </Row>
-
-      <Row className="mb-4">
-        <Col md={12}>
-          <Card>
-            <Card.Body>
-              <Card.Title>Người Dùng Mới Mỗi Tháng</Card.Title>
-              <div style={{ height: '300px' }}>
-                <Bar data={newUsersData} options={chartOptions} />
-              </div>
-            </Card.Body>
-          </Card>
+        <Col md={6} className="mb-4">
+          <div className="glass-card p-4 border-0 h-100">
+             <h4 className="mb-4 fw-bold">Người dùng tăng trưởng</h4>
+             <div style={{ height: '250px' }}>
+                <Bar data={processNewUsersData(statistics)} options={chartOptions} />
+             </div>
+          </div>
         </Col>
       </Row>
     </Container>

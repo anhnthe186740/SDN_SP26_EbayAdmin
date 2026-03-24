@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Modal, Button, Form } from "react-bootstrap";
+import { userService } from "../services/api";
 
 const EditUserModal = ({ show, onHide, user, onSave }) => {
   const [formData, setFormData] = useState({
@@ -25,16 +26,14 @@ const EditUserModal = ({ show, onHide, user, onSave }) => {
   };
 
   const handleSubmit = () => {
-    const url = process.env.REACT_APP_API_PATH;
-    fetch(`${url}/users/${user.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(formData),
-    })
-      .then((res) => res.json())
-      .then((updatedUser) => {
-        onSave(updatedUser);
+    userService.update(user.id, formData)
+      .then((res) => {
+        onSave(res.data);
         onHide();
+      })
+      .catch(err => {
+        console.error("Lỗi cập nhật người dùng:", err);
+        alert("Không thể cập nhật thông tin!");
       });
   };
 

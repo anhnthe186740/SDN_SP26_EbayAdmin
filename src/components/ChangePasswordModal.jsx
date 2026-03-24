@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Modal, Button, Form } from "react-bootstrap";
+import { userService } from "../services/api";
 
 const ChangePasswordModal = ({ show, onHide, user }) => {
   const [newPassword, setNewPassword] = useState("");
@@ -7,17 +8,15 @@ const ChangePasswordModal = ({ show, onHide, user }) => {
   const handleSubmit = () => {
     if (!newPassword.trim()) return alert("Vui lòng nhập mật khẩu mới");
 
-    const url = process.env.REACT_APP_API_PATH;
-    fetch(`${url}/users/${user.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password: newPassword }),
-    })
-      .then((res) => res.json())
+    userService.update(user.id, { password: newPassword })
       .then(() => {
         alert("Đổi mật khẩu thành công!");
         setNewPassword("");
         onHide();
+      })
+      .catch(err => {
+        console.error("Lỗi đổi mật khẩu:", err);
+        alert("Không thể đổi mật khẩu!");
       });
   };
 

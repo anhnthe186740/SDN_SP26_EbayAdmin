@@ -1,7 +1,6 @@
-// src/pages/Register.jsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import { userService, logService } from "../services/api";
 import moment from "moment";
 
 
@@ -17,9 +16,8 @@ function Register() {
     e.preventDefault();
 
     try {
-      const url = process.env.REACT_APP_API_PATH;
       // Kiểm tra username đã tồn tại chưa
-      const res = await axios.get(`${url}/users`);
+      const res = await userService.getAll();
       const existingUser = res.data.find((user) => user.username === username);
 
       if (existingUser) {
@@ -33,7 +31,7 @@ function Register() {
         password,
         fullname,
         role,
-        email: null,
+        email: email || null,
         avatarURL: null,
         ...(role === "admin" && {
           permissions: {
@@ -44,14 +42,14 @@ function Register() {
         })
       };
 
-      const userRes = await axios.post(`${url}/users`, newUser);
+      const userRes = await userService.create(newUser);
 
       // Ghi log đăng ký
-      await axios.post(`${url}/logs`, {
+      await logService.create({
         action: "register",
         user: username,
         timestamp: new Date().toISOString(),
-        ip: window.location.hostname, // hoặc IP giả định như "127.0.0.1"
+        ip: window.location.hostname,
         level: "info"
       });
 

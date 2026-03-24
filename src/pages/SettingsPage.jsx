@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Container, Card, Form, Button, Table, Row, Col } from "react-bootstrap";
-import axios from "axios";
+import { adminService, userService, logService } from "../services/api";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 const AdminSettingsPage = () => {
@@ -22,10 +22,8 @@ const AdminSettingsPage = () => {
 
   // Fetch initial data
   useEffect(() => {
-    const url = process.env.REACT_APP_API_PATH;
     // Fetch Admin Data (IP and 2FA)
-    axios
-      .get(`${url}/admins/${loggedInAdminId}`)
+    adminService.getById(loggedInAdminId)
       .then((res) => {
         setAdminIP(res.data.ip || "");
         setIs2FAEnabled(res.data["2fa"] || false);
@@ -33,14 +31,12 @@ const AdminSettingsPage = () => {
       .catch((err) => console.error("Error fetching admin data:", err));
 
     // Fetch All Users
-    axios
-      .get(`${url}/users`)
+    userService.getAll()
       .then((res) => setUsers(res.data))
       .catch((err) => console.error("Error fetching users:", err));
 
     // Fetch Logs
-    axios
-      .get(`${url}/logs`)
+    logService.getAll()
       .then((res) => setLogs(res.data))
       .catch((err) => console.error("Error fetching logs:", err));
   }, []);
@@ -51,10 +47,8 @@ const AdminSettingsPage = () => {
       alert("Vui lòng nhập IP hợp lệ (VD: 192.168.1.1)!");
       return;
     }
-    const url = process.env.REACT_APP_API_PATH;
-    axios
-      .patch(`${url}/admins/${loggedInAdminId}`, { ip: newIP })
-      .then((res) => {
+    adminService.update(loggedInAdminId, { ip: newIP })
+      .then(() => {
         setAdminIP(newIP);
         setNewIP("");
         logAction("Update Admin IP", `IP updated to: ${newIP}`);
@@ -68,9 +62,7 @@ const AdminSettingsPage = () => {
   // Toggle 2FA
   const handleToggle2FA = () => {
     const new2FAStatus = !is2FAEnabled;
-    const url = process.env.REACT_APP_API_PATH;
-    axios
-      .patch(`${url}/admins/${loggedInAdminId}`, { "2fa": new2FAStatus })
+    adminService.update(loggedInAdminId, { "2fa": new2FAStatus })
       .then(() => {
         setIs2FAEnabled(new2FAStatus);
         logAction("Toggle 2FA", `2FA ${new2FAStatus ? "Enabled" : "Disabled"}`);
@@ -83,10 +75,8 @@ const AdminSettingsPage = () => {
 
   // Update User Role
   const handleRoleChange = (userId, newRole) => {
-    const url = process.env.REACT_APP_API_PATH;
-    axios
-      .patch(`${url}/users/${userId}`, { role: newRole })
-      .then((res) => {
+    userService.update(userId, { role: newRole })
+      .then(() => {
         setUsers(
           users.map((u) => (u.id === userId ? { ...u, role: newRole } : u))
         );
@@ -100,123 +90,161 @@ const AdminSettingsPage = () => {
 
   // Log Action
   const logAction = (action, details) => {
-    const url = process.env.REACT_APP_API_PATH;
-    axios
-      .post(`${url}/logs`, {
-        action,
-        user: "admin01", // Hardcoded for simplicity
-        timestamp: new Date().toISOString(),
-        ip: adminIP || "192.168.1.10", // Use admin's IP or fallback
-        level: "info",
-        details,
-      })
+    logService.create({
+      action,
+      user: "admin01", // Hardcoded for simplicity
+      timestamp: new Date().toISOString(),
+      ip: adminIP || "192.168.1.10", // Use admin's IP or fallback
+      level: "info",
+      details,
+    })
       .then((res) => setLogs([...logs, res.data]))
       .catch((err) => console.error("Error logging:", err));
   };
 
   return (
-    <Container className="my-5">
-      <h2 className="mb-4 text-primary">Cài đặt Bảo mật & Phân quyền</h2>
+    <div className="py-2">
+      <div className="mb-5">
+        <h2 className="fw-bold text-dark mb-1">Cài đặt Hệ thống</h2>
+        <p className="text-muted small">Quản lý bảo mật, phân quyền và giám sát hoạt động quản trị viên.</p>
+      </div>
 
-      {/* Admin IP */}
-      <Card className="shadow-sm mb-4">
-        <Card.Body>
-          <h5 className="text-primary">IP Admin</h5>
-          <Form.Group className="mb-3">
-            <Form.Label>IP nội bộ hiện tại: {adminIP || "Chưa thiết lập"}</Form.Label>
-            <Row>
-              <Col md={8}>
-                <Form.Control
+      <Row className="g-4 mb-4">
+        {/* Admin IP */}
+        <Col lg={7}>
+          <div className="glass-card p-4 border-0 h-100">
+            <h5 className="fw-bold mb-4 d-flex align-items-center gap-2">
+              <i className="bi bi-shield-lock-fill text-primary"></i> Bảo mật IP Admin
+            </h5>
+            <div className="bg-light rounded-4 p-4 mb-3 border">
+              <p className="mb-1 text-muted small fw-bold text-uppercase">Địa chỉ IP hiện tại</p>
+              <h3 className="fw-bold text-dark">{adminIP || "Chưa thiết lập"}</h3>
+            </div>
+            <div className="row g-2">
+              <div className="col-md-8">
+                <input
                   type="text"
-                  placeholder="Nhập IP (VD: 192.168.1.1)"
+                  className="form-control border-0 bg-light py-2 rounded-3"
+                  placeholder="Nhập IP mới (VD: 192.168.1.1)"
                   value={newIP}
                   onChange={(e) => setNewIP(e.target.value)}
                 />
-              </Col>
-              <Col md={4}>
-                <Button variant="success" onClick={handleUpdateIP}>
+              </div>
+              <div className="col-md-4">
+                <button className="btn-modern btn-modern-primary w-100" onClick={handleUpdateIP}>
                   Cập nhật IP
-                </Button>
-              </Col>
-            </Row>
-          </Form.Group>
-        </Card.Body>
-      </Card>
+                </button>
+              </div>
+            </div>
+            <p className="mt-3 text-muted small"><i className="bi bi-info-circle me-1"></i> Chỉ địa chỉ IP này mới có quyền truy cập vào bảng quản trị cao cấp.</p>
+          </div>
+        </Col>
 
-      {/* 2FA Toggle */}
-      <Card className="shadow-sm mb-4">
-        <Card.Body>
-          <h5 className="text-primary">Xác minh 2 bước (2FA)</h5>
-          <Form.Check
-            type="switch"
-            label={is2FAEnabled ? "2FA đã bật" : "2FA đã tắt"}
-            checked={is2FAEnabled}
-            onChange={handleToggle2FA}
-          />
-        </Card.Body>
-      </Card>
+        {/* 2FA Toggle */}
+        <Col lg={5}>
+          <div className="glass-card p-4 border-0 h-100 d-flex flex-column justify-content-between">
+            <div>
+              <h5 className="fw-bold mb-4 d-flex align-items-center gap-2">
+                <i className="bi bi-fingerprint text-success"></i> Xác thực 2 bước (2FA)
+              </h5>
+              <p className="text-muted">Tăng cường bảo mật tài khoản bằng cách yêu cầu mã xác nhận khi đăng nhập.</p>
+            </div>
+            <div className="d-flex align-items-center justify-content-between bg-light p-3 rounded-4 mt-auto">
+               <span className={`fw-bold ${is2FAEnabled ? 'text-success' : 'text-danger'}`}>
+                 {is2FAEnabled ? '✅ ĐÃ KÍCH HOẠT' : '❌ ĐANG TẮT'}
+               </span>
+               <div className="form-check form-switch m-0">
+                 <input
+                   className="form-check-input"
+                   type="checkbox"
+                   role="switch"
+                   style={{ width: '3rem', height: '1.5rem', cursor: 'pointer' }}
+                   checked={is2FAEnabled}
+                   onChange={handleToggle2FA}
+                 />
+               </div>
+            </div>
+          </div>
+        </Col>
+      </Row>
 
       {/* User Roles */}
-      <Card className="shadow-sm mb-4">
-        <Card.Body>
-          <h5 className="text-primary">Phân quyền Người dùng</h5>
-          <Table bordered hover>
+      <div className="glass-card p-4 border-0 mb-4">
+        <h5 className="fw-bold mb-4 d-flex align-items-center gap-2">
+          <i className="bi bi-people-fill text-info"></i> Phân quyền Người dùng
+        </h5>
+        <div className="table-responsive">
+          <table className="table table-modern align-middle">
             <thead>
               <tr>
                 <th>Tài khoản</th>
-                <th>Vai trò</th>
-                <th>Thay đổi vai trò</th>
+                <th>Vai trò hiện tại</th>
+                <th>Điều chỉnh quyền</th>
               </tr>
             </thead>
             <tbody>
               {users.map((user) => (
                 <tr key={user.id}>
-                  <td>{user.username}</td>
-                  <td>{user.role}</td>
                   <td>
-                    <Form.Select
+                    <div className="fw-bold">{user.username}</div>
+                    <div className="text-muted small">ID: {user.id}</div>
+                  </td>
+                  <td>
+                    <span className={`badge-modern ${
+                      user.role === 'admin' ? 'bg-danger-subtle text-danger' : 
+                      user.role === 'seller' ? 'bg-primary-subtle text-primary' : 'bg-success-subtle text-success'
+                    }`}>
+                      {user.role}
+                    </span>
+                  </td>
+                  <td>
+                    <select
+                      className="form-select border-0 bg-light rounded-3 py-1"
+                      style={{ maxWidth: '150px' }}
                       value={user.role}
                       onChange={(e) => handleRoleChange(user.id, e.target.value)}
                     >
-                      <option value="admin">Admin</option>
-                      <option value="user">User</option>
-                      <option value="seller">Seller</option>
-                    </Form.Select>
+                      <option value="admin">Quản trị viên</option>
+                      <option value="user">Người mua</option>
+                      <option value="seller">Người bán</option>
+                    </select>
                   </td>
                 </tr>
               ))}
             </tbody>
-          </Table>
-        </Card.Body>
-      </Card>
+          </table>
+        </div>
+      </div>
 
       {/* Access Logs */}
-      <Card className="shadow-sm">
-        <Card.Body>
-          <h5 className="text-primary">Lịch sử truy cập & hoạt động</h5>
-          <Table bordered hover>
+      <div className="glass-card p-4 border-0">
+        <h5 className="fw-bold mb-4 d-flex align-items-center gap-2">
+          <i className="bi bi-clock-history text-muted"></i> Nhật ký hoạt động
+        </h5>
+        <div className="table-responsive">
+          <table className="table table-modern table-sm">
             <thead>
               <tr>
                 <th>Thời gian</th>
                 <th>Hành động</th>
-                <th>Người dùng</th>
+                <th>Người thực hiện</th>
                 <th>Chi tiết</th>
               </tr>
             </thead>
             <tbody>
-              {logs.map((log, index) => (
+              {logs.slice(-10).reverse().map((log, index) => (
                 <tr key={index}>
-                  <td>{new Date(log.timestamp).toLocaleString()}</td>
-                  <td>{log.action}</td>
-                  <td>{log.user}</td>
-                  <td>{log.details}</td>
+                  <td><div className="text-muted small">{new Date(log.timestamp).toLocaleString()}</div></td>
+                  <td><span className="fw-bold text-dark small">{log.action}</span></td>
+                  <td><span className="text-primary small">{log.user}</span></td>
+                  <td><div className="text-muted x-small text-truncate" style={{ maxWidth: 300 }}>{log.details}</div></td>
                 </tr>
               ))}
             </tbody>
-          </Table>
-        </Card.Body>
-      </Card>
-    </Container>
+          </table>
+        </div>
+      </div>
+    </div>
   );
 };
 

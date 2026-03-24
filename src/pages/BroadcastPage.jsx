@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import { userService, notificationService, logService } from '../services/api';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 const BroadcastPage = () => {
@@ -18,15 +18,13 @@ const BroadcastPage = () => {
   const [isSending, setIsSending] = useState(false);
 
   useEffect(() => {
-    const url = process.env.REACT_APP_API_PATH;
-    axios.get(`${url}/users`)
+    userService.getAll()
       .then((res) => setUsers(res.data))
       .catch((err) => console.error('Lỗi khi tải người dùng:', err));
   }, []);
 
   const fetchNotificationHistory = () => {
-    const url = process.env.REACT_APP_API_PATH;
-    axios.get(`${url}/notifications`)
+    notificationService.getAll()
       .then((res) => {
         const sorted = res.data.sort(
           (a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0)
@@ -49,9 +47,8 @@ const BroadcastPage = () => {
     const timestamp = new Date().toISOString();
     setIsSending(true);
 
-    const url = process.env.REACT_APP_API_PATH;
     if (recipientType === 'all') {
-      axios.post(`${url}/notifications`, {
+      notificationService.create({
         title,
         content,
         type: 'broadcast',
@@ -59,23 +56,17 @@ const BroadcastPage = () => {
       })
         .then(() => {
           alert('Gửi thông báo broadcast thành công!');
-          setTitle('');
-          setContent('');
-          setRecipientType('all');
-          setSelectedUsers([]);
-          setShowHistory(false);
-          setIsSending(false);
+          resetForm();
         })
         .catch((err) => {
           console.error('Lỗi gửi broadcast:', err);
           alert('Không thể gửi thông báo broadcast!');
           setIsSending(false);
         });
-      return; // Tránh chạy phần còn lại của hàm
+      return;
     }
 
     let recipients = [];
-
     if (recipientType === 'custom') {
       recipients = users.filter(u => selectedUsers.includes(u.id));
     } else {
@@ -95,7 +86,7 @@ const BroadcastPage = () => {
       }
 
       const promises = recipients.map(user =>
-        axios.post(`${url}/notifications`, {
+        notificationService.create({
           title,
           content,
           userId: user.id,
@@ -108,14 +99,9 @@ const BroadcastPage = () => {
         .then((results) => {
           const successCount = results.filter(r => r.status === 'fulfilled').length;
           alert(`Đã gửi thành công ${successCount}/${recipients.length} người.`);
-          setTitle('');
-          setContent('');
-          setRecipientType('all');
-          setSelectedUsers([]);
-          setShowHistory(false);
-          setIsSending(false);
+          resetForm();
 
-          axios.post(`${url}/logs`, {
+          logService.create({
             action: 'Send Broadcast Notification',
             details: `Sent to ${successCount} recipients (${recipientType})`,
             timestamp
@@ -126,10 +112,19 @@ const BroadcastPage = () => {
           alert('Không thể gửi thông báo!');
           setIsSending(false);
         });
-    } else if (recipientType !== 'all') {
+    } else {
       alert('Không có người nhận phù hợp!');
       setIsSending(false);
     }
+  };
+
+  const resetForm = () => {
+    setTitle('');
+    setContent('');
+    setRecipientType('all');
+    setSelectedUsers([]);
+    setShowHistory(false);
+    setIsSending(false);
   };
 
   const handleTemplateSelect = (e) => {

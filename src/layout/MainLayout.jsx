@@ -16,18 +16,18 @@ function MainLayout({ children }) {
       <div className="d-flex flex-column min-vh-100">
         <Header />
         {isAdminRoute ? (
-          <Container fluid className="flex-grow-1">
-            <Row className="h-100">
-              <Col md={3} className="bg-light h-100">
-                <Sidebar />
-              </Col>
-              <Col md={9} className="p-4 bg-white">
-                <main>{children}</main>
-              </Col>
-            </Row>
-          </Container>
+          <div className="d-flex flex-grow-1 overflow-hidden" style={{ background: 'var(--bg-main)' }}>
+            <div style={{ width: 'auto', minHeight: '100vh', zIndex: 100 }}>
+              <Sidebar />
+            </div>
+            <main className="flex-grow-1 p-4 overflow-auto" style={{ height: '100vh' }}>
+              <div className="container-fluid">
+                {children}
+              </div>
+            </main>
+          </div>
         ) : (
-          <Container fluid className="flex-grow-1 p-4 bg-white">
+          <Container fluid className="flex-grow-1 p-4" style={{ background: 'var(--bg-main)' }}>
             <main>{children}</main>
             <Footer />
           </Container>

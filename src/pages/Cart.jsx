@@ -7,7 +7,7 @@ import CartProductCard from "../components/CartProductCard";
 import CartHeader from "../components/CartHeader";
 
 function Cart() {
-  const { cart, incrementQuantity, decrementQuantity } = useContext(CartContext);
+  const { cart } = useContext(CartContext);
   const { order, setOrder } = useContext(OrderContext);
 
   useEffect(() => {

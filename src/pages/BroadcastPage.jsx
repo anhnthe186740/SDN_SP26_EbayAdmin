@@ -10,7 +10,7 @@ const BroadcastPage = () => {
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
-  const [templates, setTemplates] = useState([
+  const [templates] = useState([
     { title: 'Khuyến mãi hôm nay', content: 'Nhanh tay nhận ưu đãi giảm giá lên đến 50%!' },
     { title: 'Thông báo bảo trì', content: 'Hệ thống sẽ bảo trì từ 2h đến 5h sáng mai.' },
     { title: 'Thông tin hoàn tiền', content: 'Bạn đã được hoàn tiền thành công đơn hàng #XYZ.' },

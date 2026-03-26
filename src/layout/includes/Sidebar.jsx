@@ -51,24 +51,24 @@ function Sidebar() {
       icon: <AppstoreOutlined />,
       path: '/admin/returns',
     },
-    {
-      key: 'broadcast',
-      label: 'Phát thông báo',
-      icon: <AppstoreOutlined />,
-      path: '/admin/broadcast',
-    },
-    {
-      key: 'settings',
-      label: 'Cài đặt',
-      icon: <AppstoreOutlined />,
-      path: '/admin/settings',
-    },
-    {
-      key: 'logs',
-      label: 'Nhật ký hệ thống',
-      icon: <AppstoreOutlined />,
-      path: '/admin/logs',
-    },
+    // {
+    //   key: 'broadcast',
+    //   label: 'Phát thông báo',
+    //   icon: <AppstoreOutlined />,
+    //   path: '/admin/broadcast',
+    // },
+    // {
+    //   key: 'settings',
+    //   label: 'Cài đặt',
+    //   icon: <AppstoreOutlined />,
+    //   path: '/admin/settings',
+    // },
+  //   {
+  //     key: 'logs',
+  //     label: 'Nhật ký hệ thống',
+  //     icon: <AppstoreOutlined />,
+  //     path: '/admin/logs',
+  //   },
     {
       key: 'dashboard-config',
       label: 'Cấu hình Dashboard',
@@ -97,7 +97,7 @@ function Sidebar() {
         <Button
             type="text"
             onClick={toggleCollapsed}
-            className="d-flex align-items-center justify-content-center p-0"
+            className="d-flex align-items-center justify-content-center p-0 ms-auto me-2"
             style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(0,0,0,0.05)' }}
           >
             <i className={`bi ${collapsed ? 'bi-chevron-right' : 'bi-chevron-left'}`}></i>

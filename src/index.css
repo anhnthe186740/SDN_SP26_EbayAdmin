@@ -166,3 +166,235 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 0.7rem;
   text-transform: uppercase;
 }
+
+/* Hiệu ứng nổi thẻ khi Hover */
+.hover-elevate {
+  transition: transform 0.3s ease, box-shadow 0.3s ease !important;
+}
+
+.hover-elevate:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08) !important;
+}
+/* =========================================
+   CUSTOM NÚT THU GỌN SIDEBAR
+========================================= */
+.btn-sidebar-toggle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: #64748b;
+  outline: none;
+}
+
+.btn-sidebar-toggle:hover {
+  /* Hiệu ứng gradient khi trỏ chuột */
+  background: linear-gradient(135deg, #0052FF 0%, #007AFF 100%);
+  color: white;
+  border-color: transparent;
+  transform: scale(1.1) rotate(5deg);
+  box-shadow: 0 6px 15px rgba(0, 82, 255, 0.3);
+}
+
+/* =========================================
+   CUSTOM PHÂN TRANG (PAGINATION)
+========================================= */
+.custom-pagination {
+  gap: 10px;
+}
+
+.custom-pagination .page-item .page-link {
+  width: 42px;
+  height: 42px;
+  border-radius: 50% !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  color: #475569;
+  background: #f8fafc;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+/* Hiệu ứng Hover cho các nút số bình thường */
+.custom-pagination .page-item:not(.disabled):not(.active) .page-link:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.08);
+}
+
+/* Trạng thái đang chọn (Active) */
+.custom-pagination .page-item.active .page-link {
+  background: linear-gradient(135deg, #0052FF 0%, #007AFF 100%);
+  color: white;
+  box-shadow: 0 6px 15px rgba(0, 82, 255, 0.35);
+  transform: scale(1.05);
+}
+
+/* Trạng thái bị khóa (Disabled) */
+.custom-pagination .page-item.disabled .page-link {
+  background: #f1f5f9;
+  color: #cbd5e1;
+  box-shadow: none;
+  transform: none;
+}
+/* ========================================================
+   🔥 DARK MODE TUYỆT ĐỐI (TRỊ TẬN GỐC NỀN TRẮNG & CHỮ MỜ)
+   ======================================================== */
+
+/* 1. ÉP ĐEN TOÀN BỘ NỀN & KHUNG CHỨA MẶC ĐỊNH */
+[data-bs-theme="dark"], 
+[data-bs-theme="dark"] body, 
+[data-bs-theme="dark"] #root, 
+[data-bs-theme="dark"] .main-layout-wrapper,
+[data-bs-theme="dark"] main {
+  background-color: #121212 !important;
+  color: #f8f9fa !important;
+}
+
+/* 2. TIÊU DIỆT HOÀN TOÀN CÁC CLASS NỀN TRẮNG CỦA BOOTSTRAP */
+[data-bs-theme="dark"] .bg-white,
+[data-bs-theme="dark"] .bg-light,
+[data-bs-theme="dark"] .bg-body {
+  background-color: #1e1e24 !important; /* Đổi nền trắng thành xám than than chì */
+  color: #f8f9fa !important;
+  border-color: #2d2d35 !important;
+}
+
+/* 3. ĐẶC TRỊ SIDEBAR (MENU BÊN TRÁI) */
+[data-bs-theme="dark"] .admin-sidebar,
+[data-bs-theme="dark"] aside,
+[data-bs-theme="dark"] .d-flex > div[style*="min-height: 100vh"] {
+  background-color: #1a1a20 !important;
+  border-right: 1px solid #2d2d35 !important;
+}
+
+/* 4. CHỮA BỆNH MÙ CHỮ (ÉP MỌI CHỮ BỊ ĐEN/CHÌM THÀNH TRẮNG SÁNG) */
+[data-bs-theme="dark"] .text-dark,
+[data-bs-theme="dark"] h1, [data-bs-theme="dark"] h2, 
+[data-bs-theme="dark"] h3, [data-bs-theme="dark"] h4, 
+[data-bs-theme="dark"] h5, [data-bs-theme="dark"] h6 {
+  color: #ffffff !important;
+}
+
+/* Các chữ nhỏ, chữ nhạt thì cho màu xám bạc để dễ đọc */
+[data-bs-theme="dark"] .text-muted,
+[data-bs-theme="dark"] span:not(.badge),
+[data-bs-theme="dark"] p {
+  color: #94a3b8 !important; 
+}
+
+/* 5. TRỊ CÁC COMPONENT CỦA THƯ VIỆN ANT DESIGN (Trang Cấu hình Dashboard) */
+[data-bs-theme="dark"] .ant-card,
+[data-bs-theme="dark"] .ant-select-selector,
+[data-bs-theme="dark"] .ant-input,
+[data-bs-theme="dark"] .ant-switch {
+  background-color: #2b2b36 !important;
+  color: #ffffff !important;
+  border-color: #3f3f46 !important;
+}
+[data-bs-theme="dark"] .ant-select-arrow {
+  color: #94a3b8 !important;
+}
+[data-bs-theme="dark"] .ant-select-selection-item {
+  color: #ffffff !important;
+}
+
+/* 6. FIX LỖI THẺ CARD, BẢNG BIỂU & NÚT BẤM (BOOTSTRAP) */
+[data-bs-theme="dark"] .glass-card, 
+[data-bs-theme="dark"] .premium-card {
+  background-color: #1e1e24 !important;
+  border-color: #2d2d35 !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5) !important;
+}
+
+[data-bs-theme="dark"] .premium-input,
+[data-bs-theme="dark"] .form-control,
+[data-bs-theme="dark"] .form-select {
+  background-color: #2b2b36 !important;
+  color: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-bs-theme="dark"] .table { color: #e2e8f0 !important; }
+[data-bs-theme="dark"] .table th, 
+[data-bs-theme="dark"] .table td { border-bottom-color: #2d2d35 !important; background-color: transparent !important; }
+[data-bs-theme="dark"] .table thead th { background-color: #1a1a20 !important; color: #ffffff !important; }
+[data-bs-theme="dark"] .table-hover tbody tr:hover td { background-color: #2b2b36 !important; color: white !important;}
+
+/* Fix riêng các widget kéo thả */
+[data-bs-theme="dark"] .widget-item {
+  background-color: #2b2b36 !important;
+  border-color: #3f3f46 !important;
+}
+[data-bs-theme="dark"] .widget-item span {
+  color: #ffffff !important;
+}
+/* ========================================================
+   🔥 XUYÊN GIÁP SIDEBAR ACRYLIC
+   ======================================================== */
+[data-bs-theme="dark"] .sidebar-acrylic,
+[data-bs-theme="dark"] .admin-sidebar > div {
+  background: rgba(26, 26, 32, 0.8) !important; /* Nền kính mờ màu than chì */
+  border-right-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Fix màu chữ ở Sidebar cho tiệp màu */
+[data-bs-theme="dark"] .sidebar-acrylic a,
+[data-bs-theme="dark"] .sidebar-acrylic span {
+  color: #cbd5e1 !important;
+}
+
+[data-bs-theme="dark"] .sidebar-acrylic .sidebar-item-active {
+  color: white !important;
+}
+/* ========================================================
+   🔥 VÁ LỖI NỀN TRẮNG CỦA BẢNG (TABLE-MODERN) VÀ PHÂN TRANG
+   ======================================================== */
+
+/* 1. Ép đen các hàng (row) cứng đầu trong bảng */
+[data-bs-theme="dark"] .table-modern tbody tr {
+  background-color: #1e1e24 !important; /* Màu xám than chì */
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3) !important; /* Đổi bóng đổ cho hợp nền tối */
+}
+
+/* Hiệu ứng khi rê chuột vào hàng (sáng lên một chút) */
+[data-bs-theme="dark"] .table-modern tbody tr:hover {
+  background-color: #2b2b36 !important;
+  transform: scale(1.005);
+}
+
+/* Fix màu chữ bên trong bảng để không bị chìm */
+[data-bs-theme="dark"] .table-modern td {
+  color: #e2e8f0 !important;
+}
+
+/* 2. Ép đen các nút Phân Trang (Pagination) */
+[data-bs-theme="dark"] .custom-pagination .page-item:not(.active):not(.disabled) .page-link {
+  background-color: #1e1e24 !important;
+  color: #cbd5e1 !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
+}
+
+/* Hover nút phân trang */
+[data-bs-theme="dark"] .custom-pagination .page-item:not(.active):not(.disabled) .page-link:hover {
+  background-color: #2b2b36 !important;
+  color: #ffffff !important;
+}
+
+/* Trạng thái nút bị khóa (Disabled) */
+[data-bs-theme="dark"] .custom-pagination .page-item.disabled .page-link {
+  background-color: #121212 !important;
+  color: #475569 !important;
+}

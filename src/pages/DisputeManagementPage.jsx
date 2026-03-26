@@ -1,293 +1,239 @@
-import React, { useEffect, useState } from 'react';
-import { disputeService, orderService, userService, orderItemService, logService } from '../services/api';
-import 'bootstrap/dist/css/bootstrap.min.css';
+import React, { useState, useEffect } from "react";
+import "bootstrap/dist/css/bootstrap.min.css";
+import { userService, genericService } from "../services/api";
+
+// 1. RÚT GỌN TỪ NGỮ ĐỂ TRÁNH TRÀN KHUNG (UI GỌN GÀNG HƠN)
+const STATUS_MAP = {
+  pending: { label: "⏳ Đang xử lý", color: "bg-warning-subtle text-warning" },
+  resolved: { label: "✅ Đã giải quyết", color: "bg-success-subtle text-success" },
+  closed: { label: "❌ Đã từ chối", color: "bg-danger-subtle text-danger" }
+};
+
+const formatDate = (isoString) => {
+  if (!isoString) return "N/A";
+  const date = new Date(isoString);
+  return date.toLocaleDateString("vi-VN", { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+};
 
 const DisputeManagementPage = () => {
-    const [disputes, setDisputes] = useState([]);
-    const [orders, setOrders] = useState([]);
-    const [users, setUsers] = useState([]);
-    const [orderItems, setOrderItems] = useState([]);
-    const [filterStatus, setFilterStatus] = useState('');
-    const [searchQuery, setSearchQuery] = useState('');
-    const [selectedDispute, setSelectedDispute] = useState(null);
+  const [disputes, setDisputes] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [disputesRes, ordersRes, usersRes, orderItemsRes] = await Promise.all([
-                    disputeService.getAll(),
-                    orderService.getAll(),
-                    userService.getAll(),
-                    orderItemService.getAll()
-                ]);
-                setDisputes(disputesRes.data);
-                setOrders(ordersRes.data);
-                setUsers(usersRes.data);
-                setOrderItems(orderItemsRes.data);
-            } catch (error) {
-                console.error('Lỗi khi tải dữ liệu khiếu nại:', error);
-            }
-        };
-        fetchData();
-    }, []);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
-    const handleStatusChange = (id, newStatus) => {
-        const selected = disputes.find((d) => d.id.toString() === id.toString());
-        if (!selected) return;
+  const disputeService = genericService('disputes');
 
-        const confirmChange = window.confirm(`Bạn có chắc chắn muốn đổi trạng thái khiếu nại #${id} thành "${newStatus}" không?`);
-        if (!confirmChange) return;
-
-        disputeService.update(id, { status: newStatus })
-            .then(() => {
-                const updated = disputes.map((d) =>
-                    d.id.toString() === id.toString() ? { ...d, status: newStatus } : d
-                );
-                setDisputes(updated);
-                alert('Cập nhật trạng thái thành công!');
-                logService.create({
-                    action: 'Update Dispute Status',
-                    disputeId: id,
-                    newStatus,
-                    timestamp: new Date().toISOString(),
-                }).catch((error) => console.error('Lỗi khi ghi log:', error));
-            })
-            .catch((error) => {
-                console.error('Lỗi khi cập nhật trạng thái:', error);
-                alert('Không thể cập nhật trạng thái. Vui lòng thử lại.');
-            });
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [disputesRes, usersRes] = await Promise.all([
+          disputeService.getAll(),
+          userService.getAll()
+        ]);
+        const sortedDisputes = disputesRes.data.sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date));
+        setDisputes(sortedDisputes);
+        setUsers(usersRes.data);
+      } catch (err) {
+        console.error("Lỗi khi tải dữ liệu khiếu nại:", err);
+      }
     };
+    fetchData();
+  }, []);
 
-    const handleApproveReject = (id, action) => {
-        const newStatus = action === 'approve' ? 'resolved' : 'closed';
-        handleStatusChange(id, newStatus);
-    };
+  const getUserName = (id) => users.find((u) => String(u.id) === String(id))?.fullname || "Người dùng ẩn danh";
 
-    const filteredDisputes = disputes
-        .filter((d) => {
-            const user = users.find((u) => u.id.toString() === d.raisedBy.toString());
-            return user && ['user', 'seller'].includes(user.role);
-        })
-        .filter((d) => {
-            const matchesStatus = filterStatus ? d.status === filterStatus : true;
-            const matchesSearch = searchQuery
-                ? d.id.toString().includes(searchQuery) ||
-                  d.raisedBy.toString().includes(searchQuery) ||
-                  d.orderId.toString().includes(searchQuery)
-                : true;
-            return matchesStatus && matchesSearch;
-        });
+  const handleUpdateStatus = (id, newStatus) => {
+    const currentDispute = disputes.find(d => d.id === id);
+    if (!currentDispute) return;
 
-    const getUserName = (userId) => {
-        const user = users.find((u) => u.id.toString() === userId.toString());
-        return user ? user.fullname || user.username : `Unknown User (${userId})`;
-    };
+    let actionName = newStatus === 'resolved' ? 'Giải quyết & Hoàn tiền' : 'Từ chối & Đóng khiếu nại';
+    if (!window.confirm(`Bạn có chắc chắn muốn [${actionName}] cho khiếu nại #${id.toString().slice(-4)} này? Hành động này không thể hoàn tác.`)) {
+      return;
+    }
 
-    const getOrderDetails = (orderId) => {
-        const order = orders.find((o) => o.id.toString() === orderId.toString());
-        const item = orderItems.find((i) => i.orderId.toString() === orderId.toString());
-        if (!order) return null;
-        return {
-            total: order.totalPrice,
-            status: order.status,
-            products: item?.products || []
-        };
-    };
+    const payload = { ...currentDispute, status: newStatus };
+    delete payload._id;
+    delete payload.__v;
 
-    const getStatusBadgeAndActions = (dispute) => {
-        const statusClasses = {
-            pending: 'bg-warning text-dark',
-            resolved: 'bg-success text-white',
-            closed: 'bg-danger text-white'
-        };
+    disputeService.update(id, payload)
+      .then(() => {
+        setDisputes(prev => prev.map(d => d.id === id ? { ...d, status: newStatus } : d));
+      })
+      .catch(err => {
+        console.error("Lỗi khi cập nhật khiếu nại:", err);
+        alert("Không thể cập nhật trạng thái! Vui lòng kiểm tra lại kết nối.");
+      });
+  };
 
-        const statusText = {
-            pending: 'Đang xử lý',
-            resolved: 'Đã giải quyết',
-            closed: 'Đã đóng'
-        };
+  const filteredDisputes = disputes.filter((d) => {
+    const userName = getUserName(d.userId).toLowerCase();
+    const orderId = String(d.orderId).toLowerCase();
+    const disputeId = String(d.id).toLowerCase();
+    
+    const matchSearch = userName.includes(search.toLowerCase()) || orderId.includes(search.toLowerCase()) || disputeId.includes(search.toLowerCase());
+    const matchStatus = statusFilter === "All" || d.status === statusFilter;
+    
+    return matchSearch && matchStatus;
+  });
 
-        const badge = (
-            <span className={`badge ${statusClasses[dispute.status]} p-2 rounded-pill`}>
-                {statusText[dispute.status]}
-            </span>
-        );
+  const totalPages = Math.ceil(filteredDisputes.length / itemsPerPage);
+  const currentDisputes = filteredDisputes.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-        if (dispute.status === 'pending') {
-            return (
-                <div className="d-flex align-items-center gap-2">
-                    {badge}
-                    <button
-                        onClick={() => handleApproveReject(dispute.id, 'approve')}
-                        className="btn btn-sm btn-outline-success rounded-pill px-3"
-                        title="Phê duyệt khiếu nại"
-                    >
-                        <i className="bi bi-check-circle"></i>
-                    </button>
-                    <button
-                        onClick={() => handleApproveReject(dispute.id, 'reject')}
-                        className="btn btn-sm btn-outline-danger rounded-pill px-3"
-                        title="Từ chối khiếu nại"
-                    >
-                        <i className="bi bi-x-circle"></i>
-                    </button>
-                </div>
-            );
-        }
-        return badge;
-    };
+  const handlePageChange = (page) => {
+    if (page >= 1 && page <= totalPages) setCurrentPage(page);
+  };
 
-    return (
-        <div className="py-2">
-            <div className="d-flex justify-content-between align-items-center mb-4">
-              <div>
-                <h2 className="fw-bold text-dark mb-1">Khiếu nại & Tranh chấp</h2>
-                <p className="text-muted small">Giải quyết các vấn đề giữa người mua và người bán để đảm bảo uy tín sàn.</p>
-              </div>
+  return (
+    <div className="py-2">
+      <div className="mb-4">
+        <h2 className="fw-bold text-dark mb-1">Khiếu nại & Tranh chấp</h2>
+        <p className="text-muted small">Giải quyết các vấn đề giữa người mua và người bán để đảm bảo uy tín sàn.</p>
+      </div>
+
+      <div className="glass-card p-4 mb-4 border-0 shadow-sm bg-white">
+        <div className="row g-3">
+          <div className="col-md-4">
+            <label className="form-label text-muted small fw-bold text-uppercase">Lọc trạng thái</label>
+            <select
+              className="form-select border-0 bg-light rounded-3 py-2 shadow-none fw-medium"
+              value={statusFilter}
+              onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+            >
+              <option value="All">Tất cả khiếu nại</option>
+              <option value="pending">⏳ Đang chờ xử lý</option>
+              <option value="resolved">✅ Đã giải quyết</option>
+              <option value="closed">❌ Đã từ chối</option>
+            </select>
+          </div>
+          <div className="col-md-8">
+            <label className="form-label text-muted small fw-bold text-uppercase">Tìm kiếm nhanh</label>
+            <div className="input-group bg-light rounded-3 overflow-hidden border-0">
+              <span className="input-group-text bg-transparent border-0"><i className="bi bi-search text-muted"></i></span>
+              <input
+                className="form-control border-0 bg-transparent py-2 shadow-none"
+                placeholder="Nhập ID khiếu nại, Tên người dùng, hoặc Mã đơn hàng..."
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+              />
             </div>
-
-            <div className="glass-card p-4 mb-4 border-0">
-                <div className="row g-3">
-                    <div className="col-md-6">
-                        <label className="form-label text-muted small fw-bold text-uppercase">Lọc trạng thái</label>
-                        <select
-                            value={filterStatus}
-                            onChange={(e) => setFilterStatus(e.target.value)}
-                            className="form-select border-0 bg-light rounded-3 py-2"
-                        >
-                            <option value="">Tất cả</option>
-                            <option value="pending">⏳ Đang xử lý</option>
-                            <option value="resolved">✅ Đã giải quyết</option>
-                            <option value="closed">🔒 Đã đóng</option>
-                        </select>
-                    </div>
-                    <div className="col-md-6">
-                        <label className="form-label text-muted small fw-bold text-uppercase">Tìm kiếm nhanh</label>
-                        <div className="input-group bg-light rounded-3 overflow-hidden border-0">
-                          <span className="input-group-text bg-transparent border-0"><i className="bi bi-search text-muted"></i></span>
-                          <input
-                              type="text"
-                              value={searchQuery}
-                              onChange={(e) => setSearchQuery(e.target.value)}
-                              placeholder="ID, User ID, mẫ đơn hàng..."
-                              className="form-control border-0 bg-transparent py-2"
-                          />
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div className="table-responsive">
-                <table className="table table-modern">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Hội thoại</th>
-                            <th>Mã đơn</th>
-                            <th>Lý do & Số tiền</th>
-                            <th>Ngày gửi</th>
-                            <th>Trạng thái & Hành động</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filteredDisputes.length === 0 ? (
-                          <tr><td colSpan="6" className="text-center py-5 text-muted">Không có khiếu nại nào phù hợp.</td></tr>
-                        ) : filteredDisputes.map((dispute) => (
-                            <tr key={dispute.id}>
-                                <td><span className="fw-bold">#{dispute.id.toString().slice(-4).toUpperCase()}</span></td>
-                                <td>
-                                   <div className="fw-bold text-primary">{getUserName(dispute.raisedBy)}</div>
-                                   <div className="small text-muted">Bên khiếu nại</div>
-                                </td>
-                                <td><code className="bg-light px-2 py-1 rounded text-dark">#{dispute.orderId}</code></td>
-                                <td>
-                                    <div className="fw-medium text-dark text-truncate" style={{ maxWidth: 200 }} title={dispute.reason}>{dispute.reason}</div>
-                                    <div className="text-danger fw-bold small">Yêu cầu bồi thường: ${dispute.amountClaimed}</div>
-                                </td>
-                                <td><div className="text-muted small">{dispute.disputeDate}</div></td>
-                                <td>
-                                  <div className="d-flex align-items-center justify-content-between gap-3">
-                                    <span className={`badge-modern ${
-                                        dispute.status === 'resolved' ? 'bg-success-subtle text-success' : 
-                                        dispute.status === 'pending' ? 'bg-warning-subtle text-warning' : 'bg-danger-subtle text-danger'
-                                    }`}>
-                                        {dispute.status}
-                                    </span>
-                                    {dispute.status === 'pending' ? (
-                                      <div className="d-flex gap-1">
-                                          <button onClick={() => handleApproveReject(dispute.id, 'approve')} className="btn-modern btn-sm bg-success text-white px-2 py-1"><i className="bi bi-check-lg"></i></button>
-                                          <button onClick={() => handleApproveReject(dispute.id, 'reject')} className="btn-modern btn-sm bg-danger text-white px-2 py-1"><i className="bi bi-x-lg"></i></button>
-                                      </div>
-                                    ) : (
-                                      <button className="btn-modern btn-sm bg-light text-primary" onClick={() => setSelectedDispute(dispute)}><i className="bi bi-eye-fill"></i></button>
-                                    )}
-                                  </div>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-
-            {selectedDispute && (
-                <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-                    <div className="modal-dialog modal-lg">
-                        <div className="modal-content">
-                            <div className="modal-header bg-light">
-                                <h5 className="modal-title fw-bold">Chi tiết khiếu nại #{selectedDispute.id}</h5>
-                                <button type="button" className="btn-close" onClick={() => setSelectedDispute(null)}></button>
-                            </div>
-                            <div className="modal-body">
-                                <div className="row">
-                                    <div className="col-md-6">
-                                        <p><strong>Người dùng:</strong> {getUserName(selectedDispute.raisedBy)}</p>
-                                        <p><strong>Đơn hàng:</strong> {selectedDispute.orderId}</p>
-                                        <p><strong>Lý do:</strong> {selectedDispute.reason}</p>
-                                        <p><strong>Số tiền yêu cầu:</strong> {selectedDispute.amountClaimed}</p>
-                                    </div>
-                                    <div className="col-md-6">
-                                        <p><strong>Ngày tranh chấp:</strong> {selectedDispute.disputeDate}</p>
-                                        <p><strong>Ngày giải quyết:</strong> {selectedDispute.resolutionDate || 'Chưa giải quyết'}</p>
-                                        <p><strong>Ghi chú:</strong> {selectedDispute.description || 'Không có ghi chú'}</p>
-                                        <p><strong>Hướng xử lý:</strong> {selectedDispute.resolution || 'Chưa có hướng xử lý'}</p>
-                                    </div>
-                                </div>
-                                {(() => {
-                                    const order = getOrderDetails(selectedDispute.orderId);
-                                    return order ? (
-                                        <div className="mt-4">
-                                            <h6 className="fw-bold">Thông tin đơn hàng</h6>
-                                            <p><strong>Tổng tiền:</strong> {order.total}</p>
-                                            <p><strong>Trạng thái:</strong> {order.status}</p>
-                                            <p><strong>Sản phẩm:</strong></p>
-                                            <ul className="list-group">
-                                                {order.products.map((p, index) => (
-                                                    <li key={index} className="list-group-item bg-light">
-                                                        {p.name} - Giá: {p.price} - Số lượng: {p.quantity}
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                    ) : (
-                                        <p className="text-muted">Không tìm thấy thông tin đơn hàng</p>
-                                    );
-                                })()}
-                            </div>
-                            <div className="modal-footer">
-                                <button
-                                    type="button"
-                                    className="btn btn-secondary rounded-pill"
-                                    onClick={() => setSelectedDispute(null)}
-                                >
-                                    Đóng
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
+          </div>
         </div>
-    );
+      </div>
+
+      <div className="table-responsive glass-card p-3 border-0 shadow-sm bg-white">
+        <table className="table table-modern align-middle mb-0">
+          <thead>
+            {/* 2. CHIA TỈ LỆ WIDTH RÕ RÀNG ĐỂ CÁC CỘT KHÔNG TRANH GIÀNH NHAU */}
+            <tr>
+              <th className="text-muted text-uppercase small" style={{ width: '5%' }}>ID</th>
+              <th className="text-muted text-uppercase small" style={{ width: '20%' }}>Người dùng</th>
+              <th className="text-muted text-uppercase small" style={{ width: '10%' }}>Mã đơn</th>
+              <th className="text-muted text-uppercase small" style={{ width: '25%', minWidth: '180px' }}>Lý do & Số tiền</th>
+              <th className="text-muted text-uppercase small text-nowrap" style={{ width: '15%' }}>Ngày gửi</th>
+              <th className="text-muted text-uppercase small text-center text-nowrap" style={{ width: '12%' }}>Trạng thái</th>
+              <th className="text-end text-muted text-uppercase small text-nowrap" style={{ width: '13%' }}>Hành động</th>
+            </tr>
+          </thead>
+          <tbody>
+            {currentDisputes.length === 0 ? (
+              <tr><td colSpan="7" className="text-center py-5 text-muted fst-italic">Không có khiếu nại nào phù hợp.</td></tr>
+            ) : currentDisputes.map((d) => {
+              const statusInfo = STATUS_MAP[d.status?.toLowerCase()] || { label: d.status, color: "bg-light text-dark" };
+              const isResolvedOrClosed = ['resolved', 'closed'].includes(d.status?.toLowerCase());
+
+              return (
+                <tr key={d.id} className={isResolvedOrClosed ? "opacity-75 bg-light" : ""}>
+                  <td><span className="fw-bold text-dark">#{String(d.id).slice(-4).toUpperCase()}</span></td>
+                  <td>
+                    <div className="d-flex align-items-center gap-2">
+                      <div className="rounded-circle bg-primary-subtle text-primary d-flex align-items-center justify-content-center fw-bold" style={{ width: 32, height: 32, fontSize: '0.8rem' }}>
+                        {getUserName(d.userId).charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="fw-bold text-dark text-truncate" style={{ maxWidth: '140px' }} title={getUserName(d.userId)}>
+                          {getUserName(d.userId)}
+                        </div>
+                        <div className="text-muted" style={{ fontSize: '0.75rem' }}>Bên khiếu nại</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <code className="bg-white px-2 py-1 rounded text-dark border shadow-sm">
+                      #{String(d.orderId).slice(-4).toUpperCase()}
+                    </code>
+                  </td>
+                  <td>
+                    <div className="fw-bold text-dark text-wrap">{d.reason || d.title || "Lý do không xác định"}</div>
+                    {d.amount && (
+                      <div className="text-danger small fw-bold mt-1">
+                        Hoàn tiền: ${d.amount.toLocaleString()}
+                      </div>
+                    )}
+                  </td>
+                  {/* 3. THÊM text-nowrap ĐỂ CHỐNG XUỐNG DÒNG LỘN XỘN */}
+                  <td className="text-nowrap">
+                    <div className="text-muted small"><i className="bi bi-clock me-1"></i>{formatDate(d.createdAt || d.date)}</div>
+                  </td>
+                  <td className="text-center text-nowrap">
+                    <span className={`badge-modern ${statusInfo.color} fw-bold`} style={{ fontSize: '0.75rem' }}>
+                      {statusInfo.label}
+                    </span>
+                  </td>
+                  <td className="text-end text-nowrap">
+                    {!isResolvedOrClosed ? (
+                      <div className="d-flex justify-content-end gap-2 flex-nowrap">
+                        <button 
+                          className="btn-modern btn-sm bg-success-subtle text-success border-0 shadow-sm text-nowrap px-2"
+                          onClick={() => handleUpdateStatus(d.id, 'resolved')}
+                          title="Hoàn tiền"
+                        >
+                          <i className="bi bi-check-lg fw-bold"></i> Xử lý
+                        </button>
+                        <button 
+                          className="btn-modern btn-sm bg-danger-subtle text-danger border-0 shadow-sm text-nowrap px-2"
+                          onClick={() => handleUpdateStatus(d.id, 'closed')}
+                          title="Từ chối"
+                        >
+                          <i className="bi bi-x-lg fw-bold"></i> Đóng
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="badge bg-white text-muted border px-3 py-2 shadow-sm text-nowrap">
+                        <i className="bi bi-lock-fill me-1"></i> Đã chốt
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {totalPages > 1 && (
+        <div className="d-flex justify-content-center mt-4 mb-3">
+          <nav>
+            <ul className="pagination custom-pagination border-0 m-0">
+              <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
+                <button className="page-link" onClick={() => handlePageChange(currentPage - 1)}><i className="bi bi-chevron-left"></i></button>
+              </li>
+              {Array.from({ length: totalPages }, (_, index) => (
+                <li key={index + 1} className={`page-item ${currentPage === index + 1 ? "active" : ""}`}>
+                  <button className="page-link" onClick={() => handlePageChange(index + 1)}>{index + 1}</button>
+                </li>
+              ))}
+              <li className={`page-item ${currentPage === totalPages ? "disabled" : ""}`}>
+                <button className="page-link" onClick={() => handlePageChange(currentPage + 1)}><i className="bi bi-chevron-right"></i></button>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      )}
+    </div>
+  );
 };
 
 export default DisputeManagementPage;

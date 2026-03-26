@@ -7,8 +7,6 @@ import { Container, Col, Row, Button, Form, Image } from "react-bootstrap";
 
 function Checkout() {
   const navigate = useNavigate();
-  const [isFulfilled, setIsFulfilled] = useState(false);
-  const [validated, setValidated] = useState(false);
   const [errors, setErrors] = useState({});
   const { order, setOrder } = useContext(OrderContext);
   const { orderHistory, setOrderHistory } = useContext(OrderHistoryContext);
@@ -17,19 +15,6 @@ function Checkout() {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
-
-  useEffect(() => {
-    if (
-      order.customer.name !== "" &&
-      order.customer.address !== "" &&
-      order.customer.phone !== "" &&
-      order.products.length > 0
-    ) {
-      setIsFulfilled(true);
-    } else {
-      setIsFulfilled(false);
-    }
-  }, [order, setOrder]);
 
   const handleValidation = () => {
     const newErrors = {};
@@ -73,10 +58,7 @@ function Checkout() {
       setCart((prevCart) =>
         prevCart.filter((cartProduct) => !order.products.includes(cartProduct))
       );
-      setValidated(true);
       navigate("/order-history");
-    } else {
-      setValidated(false);
     }
   };
 

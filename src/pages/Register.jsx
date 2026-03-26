@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { userService, logService } from "../services/api";
-import moment from "moment";
 
 
 function Register() {
@@ -9,7 +8,7 @@ function Register() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [fullname, setFullname] = useState("");
-  const [role, setRole] = useState("user");
+  const [role] = useState("user");
   const [email, setEmail] = useState("");
 
   const handleRegister = async (e) => {
